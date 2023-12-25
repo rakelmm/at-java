@@ -59,4 +59,7 @@ public class Produto {
             this.categorias = produto.getCategorias();
         }
     }
+
+    public static class JsonPlaceHolderDadosRecebidos {
+    }
 }

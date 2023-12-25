@@ -1,10 +1,13 @@
 package com.rakel.atjava.controller;
 
+import com.google.gson.Gson;
 import com.rakel.atjava.model.Categoria;
+import com.rakel.atjava.model.JsonPlaceHolderDadosRecebidos;
 import com.rakel.atjava.model.Produto;
 import com.rakel.atjava.model.ProdutoRequest;
 import com.rakel.atjava.model.interfaces.CategoriaRepository;
 import com.rakel.atjava.model.interfaces.ProdutoRepository;
+import com.rakel.atjava.service.ApiConsumer;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +17,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -31,7 +34,6 @@ public class ProdutoController {
     private ProdutoRepository produtoRepository;
     @Autowired
     private CategoriaRepository categoriaRepository;
-    private final RestTemplate restTemplate;
 
     @Value("${external.api.url}")
     private String externalApiUrl;
@@ -39,16 +41,20 @@ public class ProdutoController {
     @Value("${external.jsonplaceholder.api.url}")
     private String externalJsonPlaceHolderApi;
 
-    public ProdutoController() {
-        this.restTemplate = new RestTemplate();
-    }
+    @Autowired
+    private Gson gson;
 
     @GetMapping("/api-externa/{id}")
     public ResponseEntity<String> getApiExterna(@PathVariable Long id) {
-        String url = externalJsonPlaceHolderApi + "/posts/" + id;
-        String post = restTemplate.getForObject(url, String.class);
+        ApiConsumer apiConsumer = new ApiConsumer();
+        HttpResponse<String> data = apiConsumer.getData(externalJsonPlaceHolderApi + "/posts/" + id);
 
-        return ResponseEntity.ok().body(post);
+        logger.info("Status code da api externa: " + data.statusCode());
+        logger.info("resultado direto da api externa sem conversão: " + data.body());
+        JsonPlaceHolderDadosRecebidos jsonDesserializado = gson.fromJson(data.body(), JsonPlaceHolderDadosRecebidos.class);
+        logger.info("json desserializado: " + jsonDesserializado.toString());
+
+        return ResponseEntity.status(data.statusCode()).body(data.body());
     }
 
     @GetMapping
